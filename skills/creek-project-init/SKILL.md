@@ -4,7 +4,7 @@ description: Initialize a new Creek project or scaffold from a template. Use whe
   the user wants to create a new project, start a new app, set up Creek for the
   first time, or asks about "creek init" or "create-creek-app".
 license: Apache-2.0
-compatibility: Requires Creek CLI (npm install -g @solcreek/cli)
+compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
   version: "1.0"

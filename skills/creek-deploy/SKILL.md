@@ -4,7 +4,7 @@ description: Deploy applications to Creek. Use when the user wants to deploy,
   publish, or ship their app, mentions "creek deploy", asks about preview URLs,
   sandbox deployments, or production releases on Creek.
 license: Apache-2.0
-compatibility: Requires Creek CLI (npm install -g @solcreek/cli)
+compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
   version: "1.0"
