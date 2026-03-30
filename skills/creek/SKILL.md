@@ -9,7 +9,9 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.0"
+  version: "2.1"
+  required-binaries: creek
+  required-env: CREEK_TOKEN
 ---
 
 # Creek CLI — Agent Skill
