@@ -1,27 +1,23 @@
-# Creek Skills
+# Agent Skills for Creek
 
-Official [Agent Skills](https://agentskills.io/) for [Creek](https://creek.dev) — the deployment platform that reduces Cloudflare's 200+ API primitives to a single command.
+[Agent Skills](https://agentskills.io/) for [Creek](https://creek.dev) — the deployment platform that reduces Cloudflare's 200+ API primitives to a single command.
 
-## Installation
-
-```bash
-npx skills add solcreek/creek-skills
+```
+npx skills add solcreek/skills
 ```
 
-This installs Creek skills into your AI agent (Claude Code, Cursor, Copilot, Gemini CLI, and [40+ others](https://agentskills.io/)).
+See [install.md](install.md) for full setup instructions including CLI installation.
 
-## Available Skills
+## Available skills
 
 | Skill | Description |
 |-------|-------------|
-| [creek-deploy](skills/creek-deploy/) | Deploy applications to Creek |
-| [creek-project-init](skills/creek-project-init/) | Initialize a new Creek project |
-| [creek-config](skills/creek-config/) | Configure render modes and bindings |
-| [creek-troubleshoot](skills/creek-troubleshoot/) | Diagnose common deployment issues |
+| [creek](skills/creek/SKILL.md) | Deploy and manage applications on Creek — init, deploy, status, rollback, env vars, custom domains, and more. |
 
-## What is Creek?
+## Requires
 
-Creek is a deployment platform built on Cloudflare Workers. It auto-detects your framework, determines the optimal render mode (SPA, SSR, or Worker), and deploys with per-tenant isolation — all from a single `creek deploy` command.
+- [Creek CLI](https://www.npmjs.com/package/creek) (`npm install -g creek`)
+- An authenticated account for production deploys (`creek login`)
 
 ## License
 
