@@ -11,7 +11,7 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.7"
+  version: "2.8"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
