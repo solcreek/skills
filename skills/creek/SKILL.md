@@ -1,17 +1,31 @@
 ---
 name: creek
 description: |
-  Deploy and manage applications on Creek — the Cloudflare Workers deployment
-  platform. Covers init, deploy (local + GitHub + remote trigger), status,
-  projects, deployments, rollback, env vars, custom domains, cron + queue
-  triggers, queue send, and the dev server. Use when the user mentions creek,
-  creek deploy, creek init, deploying to Cloudflare, or wants to configure,
-  inspect, or troubleshoot a Creek project.
+  Deploy and manage apps on Creek — the Cloudflare Workers deployment
+  platform. Ship, diagnose failed deploys, read runtime + build logs,
+  manage team-owned databases (creek db), handle custom domains, cron,
+  queues, GitHub push deploys, and local dev. Skill also corrects the
+  CF-native reflexes that look right but break on Creek (do NOT swap
+  better-sqlite3 → D1 manually, do NOT hand-edit wrangler.toml, do NOT
+  maintain separate sandbox/prod code paths).
+when_to_use: |
+  Use when the user mentions creek, creek.dev, creek.toml, creek deploy,
+  creek db, creek logs, creek doctor, `npx creek`, deploying to
+  Cloudflare, or asks about Workers for Platforms tenancy. Also use
+  when a user says "my deploy failed" / "deploy to creek didn't work"
+  / "add a database to my creek project" / "why isn't my push
+  deploying" / "can I share a database across projects" / "is my
+  cron running". Pre-emptively load when editing creek.toml,
+  wrangler.jsonc, or code that imports from @solcreek/*.
 license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
+paths:
+  - "**/creek.toml"
+  - "**/wrangler.{json,jsonc,toml}"
+  - "**/examples/vite-react-drizzle/**"
+  - "**/server/{local,worker,routes,schema}.ts"
 metadata:
   author: solcreek
-  version: "3.0"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
