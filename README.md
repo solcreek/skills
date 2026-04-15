@@ -12,7 +12,25 @@ See [install.md](install.md) for full setup instructions including CLI installat
 
 | Skill | Description |
 |-------|-------------|
-| [creek](skills/creek/SKILL.md) | Deploy and manage applications on Creek — init, deploy, status, rollback, env vars, custom domains, and more. |
+| [creek](skills/creek/SKILL.md) | Deploy and manage applications on Creek — deploy, diagnose failures, read logs, manage team databases, domains, cron, queues, GitHub push deploys. |
+
+## Skill layout
+
+The `creek` skill follows Anthropic's [progressive-disclosure guidance](https://code.claude.com/docs/en/skills) — `SKILL.md` stays lean (~120 lines with mental model, anti-patterns, quick triage, cheat sheet), and topic-focused detail lives in `references/` files that Claude loads on-demand:
+
+```
+skills/creek/
+├── SKILL.md                     entry + index of references
+└── references/
+    ├── commands.md              full command table + JSON output spec
+    ├── deployment-modes.md      authenticated / sandbox / CI / --from-github
+    ├── workflows.md             first-deploy / rollback / domain, frameworks
+    ├── creek-toml.md            creek.toml reference + cron + queue
+    ├── diagnosis.md             failure workflow + CK-code map + troubleshooting
+    ├── observability.md         creek logs + build logs + MCP get_build_log
+    ├── resources.md             creek db + team-owned databases + portable pattern
+    └── github-setup.md          GitHub App install + connection
+```
 
 ## Requires
 

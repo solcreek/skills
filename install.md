@@ -36,6 +36,8 @@ npx skills add solcreek/skills
 
 This installs the creek skill using the [Agent Skills](https://agentskills.io) open standard. The installer auto-detects your agent and places the skill in the correct directory. Supports Claude Code, Cursor, Copilot, Gemini CLI, OpenCode, and others.
 
+The skill follows [Anthropic's progressive-disclosure model](https://code.claude.com/docs/en/skills): the lean `SKILL.md` loads every time the skill matches, and on-demand reference files under `references/` (commands, diagnosis, observability, resources, etc.) are read only when the task needs that detail.
+
 To install for a specific agent:
 
 ```bash
