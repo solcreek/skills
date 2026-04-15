@@ -468,19 +468,24 @@ works without recreating the CF resource or breaking bindings.
 Deletion is blocked while any binding exists — detach from every
 project first, then `creek db delete`.
 
-### Portable driver (required mental model)
+### Portable pattern (required mental model)
 
-Your code reads `env.DB` in both local dev and production. Locally
-that's `better-sqlite3`, remotely that's D1, same async API via
-Drizzle/Kysely. See `examples/vite-react-drizzle` for the single-file
-pattern. Don't split `db.local.ts` + `db.prod.ts` — `creek doctor`
-flags this with `CK-DB-DUAL-DRIVER-SPLIT`.
+Share **schema + queries**; split **only the boot**. The
+`examples/vite-react-drizzle` reference:
 
-```ts
-// server/db.ts — one file, works in both environments
-import { drizzle } from "drizzle-orm/d1";  // or the better-sqlite3 variant in dev
-// ... same schema, same queries, same migrations
 ```
+server/
+├── schema.ts    shared Drizzle schema (one source of truth)
+├── routes.ts    shared Hono routes that accept a `() => db` thunk
+├── local.ts     Node + better-sqlite3 boot (dev)
+└── worker.ts    CF Worker + D1 boot (prod)
+```
+
+The async Drizzle API is the same across both drivers, so
+`routes.ts` runs unchanged in either environment. Migrations run
+against whichever driver the boot file sets up. Don't duplicate
+schema or queries across `db.local.ts` + `db.prod.ts` — `creek doctor`
+flags that with `CK-DB-DUAL-DRIVER-SPLIT`.
 
 ## Supported Frameworks
 
