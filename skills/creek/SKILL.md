@@ -11,7 +11,7 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.5"
+  version: "2.6"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
@@ -113,6 +113,7 @@ Don't. These five shortcuts are all counterproductive:
 | Filter runtime logs | `creek logs --outcome exception --since 1h --json` |
 | Read a deployment's build log | `creek deployments logs <DEPLOYMENT_ID> --json` |
 | Read raw build log ndjson | `creek deployments logs <DEPLOYMENT_ID> --raw` |
+| Pre-deploy diagnostic | `creek doctor --json` |
 
 ## Deployment Modes
 
@@ -300,6 +301,67 @@ Send a message from the CLI (useful for testing):
 ```bash
 creek queue send '{"userId":"abc"}' --json
 ```
+
+## Failure Diagnosis Workflow
+
+When a user says "my deploy failed" or "creek deploy didn't work",
+follow this sequence. Don't guess — each step returns structured data
+you can act on.
+
+### 1. Pre-deploy check (if they haven't run it yet)
+
+```bash
+creek doctor --json
+```
+
+Returns findings with `CK-*` codes, severities, and concrete fixes.
+Run before any deploy-not-even-attempted scenario. Common fires:
+`CK-NO-CONFIG`, `CK-NOTHING-TO-DEPLOY`, `CK-DB-DUAL-DRIVER-SPLIT`,
+`CK-SYNC-SQLITE`, `CK-PRISMA-SQLITE`.
+
+### 2. Find the failed deployment
+
+```bash
+creek deployments --json                    # list, newest first
+```
+
+Scan for `status: "failed"` rows; note the `id`.
+
+### 3. Read the build log
+
+```bash
+creek deployments logs <id-prefix> --json
+```
+
+Look at `metadata.errorCode` and `metadata.errorStep`. The `entries`
+array is phase-grouped — lines with `level: "error"` or from the
+failing step are the signal.
+
+### 4. Apply the fix
+
+Match `errorCode` against the CK-* mapping:
+
+| Code | Fix |
+|------|-----|
+| `CK-NO-CONFIG` | Run `creek init` or cd to a project root |
+| `CK-NOTHING-TO-DEPLOY` | Run the build, or set `[build].command` in creek.toml |
+| `CK-DB-DUAL-DRIVER-SPLIT` | Consolidate to single `server/db.ts` (see Resources v2) |
+| `CK-SYNC-SQLITE` | Move to async ORM (Drizzle/Kysely) with D1 adapter |
+| `CK-PRISMA-SQLITE` | Prisma+SQLite not supported on Workers; switch to Drizzle/Kysely |
+| `CK-RUNTIME-LOCKIN` | Drop the `@solcreek/*` runtime imports for a portable build |
+| `CK-CONFIG-OVERLAP` | Keep either creek.toml or wrangler.*, not both |
+
+For an unmapped error code or a generic `build_failed`, the
+`errorStep` tells you the phase (install / build / bundle) and the
+log entries carry the actual stderr.
+
+### 5. Redeploy
+
+```bash
+creek deploy --json
+```
+
+If the fix was config-side, `creek doctor --json` should now be clean.
 
 ## Observability
 
