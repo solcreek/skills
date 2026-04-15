@@ -11,7 +11,7 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.2"
+  version: "2.3"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
@@ -19,6 +19,45 @@ metadata:
 # Creek CLI — Agent Skill
 
 Creek deploys web apps to Cloudflare Workers with a single command. Auto-detects framework, determines render mode (SPA/SSR/Worker), provisions infrastructure.
+
+## Mental Model
+
+Creek runs on Cloudflare Workers, but **it is not raw Cloudflare**. The
+resource model, deploy flow, and runtime are abstracted. An agent
+reaching for CF-native workarounds (wrangler.toml edits, manual D1
+creation, driver rewrites) is almost always wrong on Creek.
+
+The rule of thumb: if you're about to write CF-specific glue code, check
+whether the `creek` CLI or `@solcreek/runtime` already covers the concern.
+If yes — use the Creek path.
+
+## What you DON'T need to do on Creek
+
+Because Creek visibly runs on CF, it's tempting to apply CF reasoning.
+Don't. These five shortcuts are all counterproductive:
+
+- **Do NOT swap `better-sqlite3` → D1 manually before deploy.** Creek's
+  runtime routes the same driver API to `better-sqlite3` locally and D1
+  in production. One code path, one schema, one migration set. If the
+  user's repo imports `better-sqlite3`, ship it unchanged.
+
+- **Do NOT maintain separate sandbox/production code paths.** Env var
+  behavior is identical. Sandbox just runs without user-set secrets. Gate
+  on `env.MY_KEY` being present; deploy to production via `creek deploy`
+  when the full env is needed.
+
+- **Do NOT hand-edit `wrangler.toml`.** Creek reads `creek.toml` and
+  generates wrangler config at build time. Bindings are declared in the
+  dashboard or via `creek db attach` — not in wrangler.toml.
+
+- **Do NOT create a D1 via `wrangler d1 create`.** Use `creek db create
+  <name>` — it creates a team-owned resource that can be renamed, shared
+  across projects, and detached without dropping data.
+
+- **Do NOT split `server/db.local.ts` + `server/db.prod.ts`.** Use the
+  single-file portable pattern from `examples/vite-react-drizzle`. The
+  `creek doctor` rule `CK-DB-DUAL-DRIVER-SPLIT` fires when you have
+  the split files.
 
 ## Agent Rules
 
