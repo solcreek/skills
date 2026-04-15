@@ -11,14 +11,16 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.8"
+  version: "3.0"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
 
 # Creek CLI — Agent Skill
 
-Creek deploys web apps to Cloudflare Workers with a single command. Auto-detects framework, determines render mode (SPA/SSR/Worker), provisions infrastructure.
+Creek deploys web apps to Cloudflare Workers with a single command.
+Auto-detects framework, determines render mode (SPA/SSR/Worker),
+provisions infrastructure.
 
 ## Mental Model
 
@@ -36,15 +38,16 @@ If yes — use the Creek path.
 Because Creek visibly runs on CF, it's tempting to apply CF reasoning.
 Don't. These five shortcuts are all counterproductive:
 
-- **Do NOT swap `better-sqlite3` → D1 manually before deploy.** Creek's
-  runtime routes the same driver API to `better-sqlite3` locally and D1
-  in production. One code path, one schema, one migration set. If the
-  user's repo imports `better-sqlite3`, ship it unchanged.
+- **Do NOT swap `better-sqlite3` → D1 manually before deploy.** The
+  recommended pattern keeps one shared schema + one shared query/routes
+  file, driver-agnostic. Only the thin boot files differ
+  (`server/local.ts` uses `better-sqlite3`, `server/worker.ts` uses
+  D1). See `references/resources.md` and `examples/vite-react-drizzle`.
 
 - **Do NOT maintain separate sandbox/production code paths.** Env var
-  behavior is identical. Sandbox just runs without user-set secrets. Gate
-  on `env.MY_KEY` being present; deploy to production via `creek deploy`
-  when the full env is needed.
+  behavior is identical. Sandbox just runs without user-set secrets.
+  Gate on `env.MY_KEY` being present; deploy to production via
+  `creek deploy` when the full env is needed.
 
 - **Do NOT hand-edit `wrangler.toml`.** Creek reads `creek.toml` and
   generates wrangler config at build time. Bindings are declared in the
@@ -54,10 +57,10 @@ Don't. These five shortcuts are all counterproductive:
   <name>` — it creates a team-owned resource that can be renamed, shared
   across projects, and detached without dropping data.
 
-- **Do NOT split `server/db.local.ts` + `server/db.prod.ts`.** Use the
-  single-file portable pattern from `examples/vite-react-drizzle`. The
-  `creek doctor` rule `CK-DB-DUAL-DRIVER-SPLIT` fires when you have
-  the split files.
+- **Do NOT duplicate schema or queries across `db.local.ts` +
+  `db.prod.ts` files.** Use the shared-routes + split-boot pattern
+  from `references/resources.md`. `creek doctor` flags the split with
+  `CK-DB-DUAL-DRIVER-SPLIT`.
 
 ## Quick Triage
 
@@ -66,18 +69,18 @@ Map user phrasing to the right workflow before doing anything else.
 | User says / implies | First command |
 |---------------------|--------------|
 | "deploy this" (no context) | `creek deploy --dry-run --json` first, then `creek deploy --json` |
-| "deploy failed" / "something broke" | Failure Diagnosis Workflow (below) |
-| "can't see logs" | Is it missing because edge-cached? See Observability |
-| "add a database" / "need a DB" | `creek db create <name>` + `creek db attach` |
+| "deploy failed" / "something broke" | See `references/diagnosis.md` |
+| "can't see logs" | Is it missing because edge-cached? See `references/observability.md` |
+| "add a database" / "need a DB" | `creek db create <name>` + `creek db attach` (see `references/resources.md`) |
 | "how do I run this locally" | `creek dev` |
 | "rollback the last deploy" | `creek rollback --json` |
 | "add a domain" | `creek domains add <host>` + DNS CNAME → `creek domains activate` |
-| "why isn't my push deploying" | Check GitHub connection under project Settings |
+| "why isn't my push deploying" | See `references/github-setup.md` |
 | "what env vars does it see" | `creek env ls --json` (add `--show` for values) |
 | "is my cron running" | `creek status --json` shows cron schedules |
 
 If the phrasing doesn't match any row, default to `creek doctor --json`
-— it'll surface the most likely misconfiguration.
+— it surfaces the most likely misconfiguration.
 
 ## Agent Rules
 
@@ -86,458 +89,33 @@ If the phrasing doesn't match any row, default to `creek doctor --json`
 3. **Use `--yes`** to skip confirmation prompts (auto-enabled in non-TTY).
 4. **Check `ok` field** — `true` = success, `false` = error with `error` and `message` fields.
 
-## Command Reference
+## Cheat Sheet
+
+Top commands. Full table in `references/commands.md`.
 
 | Task | Command |
 |------|---------|
 | Authenticate | `creek login` |
-| Authenticate (CI) | `creek login --token <KEY>` |
-| Check auth | `creek whoami --json` |
-| Init project | `creek init --json` |
 | Deploy | `creek deploy --json` |
-| Deploy directory | `creek deploy ./dist --json` |
-| Deploy from GitHub URL | `creek deploy https://github.com/user/repo --json` |
-| Deploy monorepo subdir | `creek deploy https://github.com/user/repo --path packages/app --json` |
-| Deploy latest commit via GitHub connection | `creek deploy --from-github --json` |
-| Deploy latest (target specific project) | `creek deploy --from-github --project <SLUG> --json` |
-| Deploy demo | `creek deploy --demo --json` |
-| Deploy template | `creek deploy --template vite-react` |
-| Skip build | `creek deploy --skip-build --json` |
+| Dry-run plan (safe, no side effects) | `creek deploy --dry-run --json` |
 | Check status | `creek status --json` |
-| Check sandbox | `creek status <SANDBOX_ID> --json` |
-| Claim sandbox | `creek claim <SANDBOX_ID> --json` |
-| List projects | `creek projects --json` |
 | List deployments | `creek deployments --json` |
-| List deployments (other) | `creek deployments --project <SLUG> --json` |
+| Read a deployment's build log | `creek deployments logs <ID> --json` |
 | Rollback | `creek rollback --json` |
-| Rollback to specific | `creek rollback <DEPLOYMENT_ID> --json` |
-| Set env var | `creek env set <KEY> <VALUE> --json` |
-| List env vars | `creek env ls --json` |
-| Show env values | `creek env ls --show --json` |
-| Remove env var | `creek env rm <KEY> --json` |
-| Add domain | `creek domains add <HOSTNAME> --json` |
-| List domains | `creek domains ls --json` |
-| Activate domain | `creek domains activate <HOSTNAME> --json` |
-| Remove domain | `creek domains rm <HOSTNAME> --json` |
-| Send a message to the project queue | `creek queue send '<JSON-BODY>' --json` |
-| Dev server (local) | `creek dev` |
-| Dev server + trigger a cron firing | `creek dev --trigger-cron "*/5 * * * *"` |
-| List team databases | `creek db ls --json` |
-| Create a team database | `creek db create <NAME> --json` |
-| Attach database to project | `creek db attach <NAME> --to <PROJECT> --as DB --json` |
-| Detach database from project | `creek db detach <NAME> --from <PROJECT> --json` |
-| Rename a database | `creek db rename <NAME> --to <NEW-NAME> --json` |
-| Delete a database | `creek db delete <NAME> --json` |
-| Tail runtime logs | `creek logs --json` |
-| Tail runtime logs (live) | `creek logs --follow --json` |
-| Filter runtime logs | `creek logs --outcome exception --since 1h --json` |
-| Read a deployment's build log | `creek deployments logs <DEPLOYMENT_ID> --json` |
-| Read raw build log ndjson | `creek deployments logs <DEPLOYMENT_ID> --raw` |
+| Runtime logs | `creek logs --follow --json` |
 | Pre-deploy diagnostic | `creek doctor --json` |
-
-## Deployment Modes
-
-### Authenticated (permanent)
-Requires `creek login`. Deploys persist under the user's account.
-Builds locally, uploads the bundle, deploys to Workers for Platforms.
-```bash
-creek deploy --json
-```
-
-### Sandbox (60-min preview)
-No auth required. Temporary preview with claimable URL.
-```bash
-creek deploy --json          # auto-sandbox when not logged in
-creek claim <SANDBOX_ID>     # convert to permanent project
-```
-
-### CI/CD
-```bash
-CREEK_TOKEN=ck_... creek deploy --yes --json
-```
-
-### Remote build via GitHub connection
-When the project has a GitHub connection (set up via the dashboard's
-`/new` import flow or `/projects/:id/settings`), Creek can deploy the
-latest commit on the project's production branch **without** running
-the build locally. The control-plane fetches the commit, invokes the
-same remote-builder container used by `git push` webhooks, and runs
-the full deploy pipeline server-side.
-
-Use this when:
-- you want to redeploy a project from a machine that doesn't have
-  the source checked out (fresh CI runner, different laptop, an
-  agent with a narrow workspace)
-- you want to trigger a deploy without actually pushing a commit
-- you want CI capability parity with the dashboard "Deploy latest"
-  button
-
-```bash
-# Infer the project from creek.toml in cwd
-creek deploy --from-github --json
-
-# Or target an explicit project by slug (or UUID)
-creek deploy --from-github --project my-app --json
-```
-
-The command polls the deployments list until the new row settles on
-`active`, `failed`, or `cancelled`, and prints each status transition.
-Fails fast if the project has no github_connection or the connection's
-production branch has no accessible commit.
-
-## JSON Output Format
-
-Every command returns structured JSON with breadcrumbs:
-
-```json
-{
-  "ok": true,
-  "url": "https://my-app-team.bycreek.com",
-  "project": "my-app",
-  "breadcrumbs": [
-    { "command": "creek status", "description": "Check deployment status" },
-    { "command": "creek deployments --project my-app", "description": "View deployment history" }
-  ]
-}
-```
-
-On error:
-```json
-{
-  "ok": false,
-  "error": "not_authenticated",
-  "message": "Not authenticated. Run `creek login` first.",
-  "breadcrumbs": [
-    { "command": "creek login", "description": "Authenticate interactively" }
-  ]
-}
-```
-
-## Workflow: First Deploy
-
-```bash
-creek login --json                # 1. Authenticate
-creek init --json                 # 2. Create creek.toml (optional)
-creek deploy --json               # 3. Deploy
-```
-
-## Workflow: Update & Rollback
-
-```bash
-creek deploy --json               # Deploy new version
-creek deployments --json          # View history
-creek rollback --json             # Rollback to previous
-creek rollback <ID> --json        # Rollback to specific deployment
-```
-
-## Workflow: Custom Domain
-
-```bash
-creek domains add app.example.com --json     # Add domain
-# User sets DNS: CNAME app.example.com → cname.creek.dev
-creek domains activate app.example.com --json # Activate after DNS
-creek domains ls --json                       # Verify status
-```
-
-## creek.toml Reference
-
-```toml
-[project]
-name = "my-app"              # Required. Lowercase alphanumeric + hyphens.
-framework = "nextjs"         # Optional. Auto-detected from package.json.
-
-[build]
-command = "npm run build"    # Build command (default: npm run build)
-output = "dist"              # Build output directory
-worker = "worker/index.ts"   # Optional: custom Worker entry point
-
-[resources]
-database = true              # D1 database   → env.DB    + `import { db } from 'creek'`
-storage  = true              # R2 bucket     → env.BUCKET + `import { storage } from 'creek'`
-cache    = true              # KV namespace  → env.KV    + `import { cache } from 'creek'`
-ai       = true              # Workers AI    → env.AI    + `import { ai } from 'creek'`
-
-[triggers]
-cron  = ["0 */6 * * *"]      # One or more cron expressions. Standard 5-field format.
-queue = true                 # Creates a per-project queue + consumer binding.
-                             # Producer: `import { queue } from 'creek'` inside the Worker.
-                             # Consumer: export a `queue(batch, env, ctx)` handler.
-```
-
-**Semantic names** (`database` / `storage` / `cache`) are the stable
-Creek names and what you should write in new projects. The legacy
-Cloudflare names (`d1` / `r2` / `kv`) are still accepted for
-backward compatibility but deprecated.
-
-**`[resources]` booleans vs `creek db`** — the `[resources]` shorthand
-auto-provisions one resource per project, legacy-compatible with v1.
-For any project needing a renameable database, a database shared
-across projects, or explicit ENV var control, use `creek db create` +
-`creek db attach` (see the next section). The two paths can coexist
-during migration.
-
-### Cron triggers
-
-Creek reads the `cron` array and registers each expression with
-Cloudflare's scheduled event system. The Worker must export a
-`scheduled(event, env, ctx)` handler. Creek generates this handler
-automatically when using a framework; for hand-written Workers, see
-the SSR/Worker examples in the docs.
-
-Verify cron is active:
-```bash
-creek status --json          # Shows registered cron schedules
-```
-
-Simulate a firing locally during dev:
-```bash
-creek dev --trigger-cron "0 */6 * * *"
-```
-
-### Queue triggers
-
-Setting `queue = true` auto-provisions a Cloudflare Queue and binds
-it to the project. Inside the Worker:
-
-```ts
-// Producer — in any request handler
-import { queue } from 'creek';
-await queue.send({ userId: 'abc', action: 'welcome-email' });
-```
-
-```ts
-// Consumer — export from the Worker entry
-export default {
-  async queue(batch, env, ctx) {
-    for (const msg of batch.messages) {
-      console.log(msg.body);
-      msg.ack();
-    }
-  },
-};
-```
-
-Send a message from the CLI (useful for testing):
-```bash
-creek queue send '{"userId":"abc"}' --json
-```
-
-## Failure Diagnosis Workflow
-
-When a user says "my deploy failed" or "creek deploy didn't work",
-follow this sequence. Don't guess — each step returns structured data
-you can act on.
-
-### 1. Pre-deploy check (if they haven't run it yet)
-
-```bash
-creek doctor --json
-```
-
-Returns findings with `CK-*` codes, severities, and concrete fixes.
-Run before any deploy-not-even-attempted scenario. Common fires:
-`CK-NO-CONFIG`, `CK-NOTHING-TO-DEPLOY`, `CK-DB-DUAL-DRIVER-SPLIT`,
-`CK-SYNC-SQLITE`, `CK-PRISMA-SQLITE`.
-
-### 2. Find the failed deployment
-
-```bash
-creek deployments --json                    # list, newest first
-```
-
-Scan for `status: "failed"` rows; note the `id`.
-
-### 3. Read the build log
-
-```bash
-creek deployments logs <id-prefix> --json
-```
-
-Look at `metadata.errorCode` and `metadata.errorStep`. The `entries`
-array is phase-grouped — lines with `level: "error"` or from the
-failing step are the signal.
-
-### 4. Apply the fix
-
-Match `errorCode` against the CK-* mapping:
-
-| Code | Fix |
-|------|-----|
-| `CK-NO-CONFIG` | Run `creek init` or cd to a project root |
-| `CK-NOTHING-TO-DEPLOY` | Run the build, or set `[build].command` in creek.toml |
-| `CK-DB-DUAL-DRIVER-SPLIT` | Consolidate to single `server/db.ts` (see Resources v2) |
-| `CK-SYNC-SQLITE` | Move to async ORM (Drizzle/Kysely) with D1 adapter |
-| `CK-PRISMA-SQLITE` | Prisma+SQLite not supported on Workers; switch to Drizzle/Kysely |
-| `CK-RUNTIME-LOCKIN` | Drop the `@solcreek/*` runtime imports for a portable build |
-| `CK-CONFIG-OVERLAP` | Keep either creek.toml or wrangler.*, not both |
-
-For an unmapped error code or a generic `build_failed`, the
-`errorStep` tells you the phase (install / build / bundle) and the
-log entries carry the actual stderr.
-
-### 5. Redeploy
-
-```bash
-creek deploy --json
-```
-
-If the fix was config-side, `creek doctor --json` should now be clean.
-
-## Observability
-
-Two distinct log streams, answering different questions:
-
-| Question | Tool |
-|----------|------|
-| "What happened during my last deploy?" | `creek deployments logs <ID>` |
-| "What's my worker doing in production?" | `creek logs` |
-| "Why did my deploy fail, and can an agent fix it?" | MCP `get_build_log` |
-
-### Runtime logs — `creek logs`
-
-Per-project tail of `console.log` / `console.error` / uncaught
-exceptions for every request your Worker served. Tenant-isolated —
-the prefix is derived from the session, not URL params.
-
-```bash
-creek logs --json                      # last hour, all outcomes
-creek logs --follow                    # live tail via WebSocket
-creek logs --outcome exception         # errors only
-creek logs --since 24h --search "order"  # free text within a window
-creek logs --deployment <id>           # specific deploy
-```
-
-Note: **edge-cached HTML requests don't appear** — they never invoke
-the worker, so no log event fires. See the Analytics tab in the
-dashboard for total HTTP traffic (including cache hits).
-
-### Build logs — `creek deployments logs <id>`
-
-Structured transcript of the deploy pipeline: clone / detect / install
-/ build / bundle / upload / provision / activate. Surfaces the
-failing step with a `CK-*` diagnostic code and the subprocess stderr.
-
-```bash
-creek deployments logs <deployment-id> --json    # agent-safe
-creek deployments logs <deployment-id> --raw     # ndjson for piping
-creek deployments logs <short-id>                # 8-char prefix works
-```
-
-Available for `creek deploy` (CLI), GitHub push deploys, and via the
-dashboard's Deployments tab (expandable panel, auto-open on failure).
-Web deploys from `creek.dev/new` render the same transcript inline
-on failure.
-
-### MCP tool — `get_build_log`
-
-`mcp.creek.dev` exposes `get_build_log` for agents that want to
-diagnose a deploy without going through the CLI. Input: Creek API key
-+ project slug + deployment id (short or full). Output: summary +
-important lines (errors + failing-step lines) + full log.
-
-Pattern: user says "my deploy to Creek failed, can you fix it?" → agent
-calls `get_build_log` → reads the `errorCode` + `errorStep` → applies
-the corresponding fix. See `creek doctor`'s CK-* codes for the mapping.
-
-## Resources v2 (`creek db`)
-
-Databases (and other resources) are **team-owned**, not project-owned.
-A resource has a stable UUID and a mutable name; it can be attached
-to one or more projects under different ENV var names. This replaces
-the "one D1 per project, name derived from project id" model.
-
-Workflow:
-
-```bash
-# 1. Create a team-level database (unattached, not yet provisioned in CF)
-creek db create users --json
-
-# 2. Attach it to one project as env.DB
-creek db attach users --to my-api --as DB --json
-
-# 3. Optionally share the same database with another project
-creek db attach users --to dashboard --as DB --json
-
-# 4. Inspect what's attached
-creek db ls --json
-```
-
-The database name is mutable — `creek db rename users --to prod-users`
-works without recreating the CF resource or breaking bindings.
-
-Deletion is blocked while any binding exists — detach from every
-project first, then `creek db delete`.
-
-### Portable pattern (required mental model)
-
-Share **schema + queries**; split **only the boot**. The
-`examples/vite-react-drizzle` reference:
-
-```
-server/
-├── schema.ts    shared Drizzle schema (one source of truth)
-├── routes.ts    shared Hono routes that accept a `() => db` thunk
-├── local.ts     Node + better-sqlite3 boot (dev)
-└── worker.ts    CF Worker + D1 boot (prod)
-```
-
-The async Drizzle API is the same across both drivers, so
-`routes.ts` runs unchanged in either environment. Migrations run
-against whichever driver the boot file sets up. Don't duplicate
-schema or queries across `db.local.ts` + `db.prod.ts` — `creek doctor`
-flags that with `CK-DB-DUAL-DRIVER-SPLIT`.
-
-## Supported Frameworks
-
-**SPA**: vite-react, vite-vue, vite-svelte, vite-solid, static HTML, astro
-**SSR**: nextjs, react-router, sveltekit, nuxt, solidstart, tanstack-start
-
-Not every SSR framework has equal support yet — check
-[creek.dev/docs/getting-started](https://creek.dev/docs/getting-started)
-for the current compatibility matrix. Next.js in particular requires
-`@solcreek/adapter-creek` or Creek's OpenNextJS workaround.
-
-## Config Detection Order
-
-1. `creek.toml` — explicit Creek config
-2. `wrangler.jsonc` / `wrangler.json` / `wrangler.toml` — existing CF config
-3. `package.json` — framework auto-detection
-4. `index.html` — static site
-
-## GitHub Auto-Deploy Setup
-
-For push-to-deploy + PR previews, the user installs the **Creek
-Deploy** GitHub App and connects a repository to a Creek project:
-
-1. Visit `https://github.com/apps/creek-deploy` and install on the
-   account or organization that owns the repo.
-2. GitHub redirects to `https://app.creek.dev/github/setup?installation_id=...`
-   which claims the installation for the current team and lists the
-   installation's repositories.
-3. Either import a new project from the dashboard's New Project →
-   Import Git Repository flow, or connect an existing project from
-   its Settings → GitHub Connection section.
-4. Pushes to the project's production branch trigger a full build +
-   deploy; pull requests trigger a preview deployment and post a
-   commit status with the preview URL.
-5. `creek deploy --from-github [--project <slug>]` can trigger the
-   same flow for the latest commit on demand (no push required).
-
-## Troubleshooting
-
-| Error | Fix |
-|-------|-----|
-| "Not authenticated" | `creek login` or set `CREEK_TOKEN` |
-| "Invalid API key" | `creek login` to re-authenticate |
-| "No creek.toml found" | `creek init` or cd to project root |
-| "No project found" | Deploy from a dir with package.json or index.html |
-| "No supported project found in repo" | Use `--path` for monorepos |
-| "Project has no GitHub connection" (on `--from-github`) | Connect the repo first via the dashboard Settings → GitHub Connection |
-| "Could not determine target project" (on `--from-github`) | Pass `--project <slug>` or run the command from a directory with a `creek.toml` |
-| Sandbox expired | Redeploy — sandboxes last 60 minutes |
-| Domain stuck "pending" | Set CNAME to `cname.creek.dev`, then `creek domains activate` |
-| Build fails | Check `[build] command` in creek.toml |
-| Webhook not firing on push | Verify the repo is connected under project Settings; GitHub App must be installed on the repo's account |
-| `CK-DB-DUAL-DRIVER-SPLIT` from `creek doctor` | Consolidate `db.local.ts` + `db.prod.ts` into a single `server/db.ts`. See `examples/vite-react-drizzle`. |
-| "Resource has bindings" on `creek db delete` | Detach from every project (`creek db detach <name> --from <project>`) before deletion |
-| "A resource named 'X' already exists" | Team-unique names; pick a different one or `creek db rename` the existing one |
+| Create team database | `creek db create <NAME> --json` |
+
+## Additional Resources
+
+Load on demand. These files live in `references/` and are meant to be
+read via `bash cat` when the task needs the detail.
+
+- `references/commands.md` — complete command table + JSON output spec
+- `references/deployment-modes.md` — authenticated / sandbox / CI / remote-GitHub
+- `references/workflows.md` — first-deploy / update-rollback / custom-domain, framework matrix, config detection order
+- `references/creek-toml.md` — full `creek.toml` reference, cron + queue details
+- `references/diagnosis.md` — failure diagnosis workflow + CK-code fix table + error-string troubleshooting
+- `references/observability.md` — `creek logs` + `creek deployments logs` + MCP `get_build_log` + edge-cache caveats
+- `references/resources.md` — `creek db` + team-owned resource model + portable pattern
+- `references/github-setup.md` — GitHub App install + repo connection
