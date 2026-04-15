@@ -11,7 +11,7 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.6"
+  version: "2.7"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
@@ -58,6 +58,26 @@ Don't. These five shortcuts are all counterproductive:
   single-file portable pattern from `examples/vite-react-drizzle`. The
   `creek doctor` rule `CK-DB-DUAL-DRIVER-SPLIT` fires when you have
   the split files.
+
+## Quick Triage
+
+Map user phrasing to the right workflow before doing anything else.
+
+| User says / implies | First command |
+|---------------------|--------------|
+| "deploy this" (no context) | `creek deploy --dry-run --json` first, then `creek deploy --json` |
+| "deploy failed" / "something broke" | Failure Diagnosis Workflow (below) |
+| "can't see logs" | Is it missing because edge-cached? See Observability |
+| "add a database" / "need a DB" | `creek db create <name>` + `creek db attach` |
+| "how do I run this locally" | `creek dev` |
+| "rollback the last deploy" | `creek rollback --json` |
+| "add a domain" | `creek domains add <host>` + DNS CNAME → `creek domains activate` |
+| "why isn't my push deploying" | Check GitHub connection under project Settings |
+| "what env vars does it see" | `creek env ls --json` (add `--show` for values) |
+| "is my cron running" | `creek status --json` shows cron schedules |
+
+If the phrasing doesn't match any row, default to `creek doctor --json`
+— it'll surface the most likely misconfiguration.
 
 ## Agent Rules
 
