@@ -11,7 +11,7 @@ license: Apache-2.0
 compatibility: Requires Creek CLI (npm install -g creek)
 metadata:
   author: solcreek
-  version: "2.3"
+  version: "2.4"
   required-binaries: creek
   required-env: CREEK_TOKEN
 ---
@@ -102,6 +102,12 @@ Don't. These five shortcuts are all counterproductive:
 | Send a message to the project queue | `creek queue send '<JSON-BODY>' --json` |
 | Dev server (local) | `creek dev` |
 | Dev server + trigger a cron firing | `creek dev --trigger-cron "*/5 * * * *"` |
+| List team databases | `creek db ls --json` |
+| Create a team database | `creek db create <NAME> --json` |
+| Attach database to project | `creek db attach <NAME> --to <PROJECT> --as DB --json` |
+| Detach database from project | `creek db detach <NAME> --from <PROJECT> --json` |
+| Rename a database | `creek db rename <NAME> --to <NEW-NAME> --json` |
+| Delete a database | `creek db delete <NAME> --json` |
 
 ## Deployment Modes
 
@@ -237,6 +243,13 @@ Creek names and what you should write in new projects. The legacy
 Cloudflare names (`d1` / `r2` / `kv`) are still accepted for
 backward compatibility but deprecated.
 
+**`[resources]` booleans vs `creek db`** — the `[resources]` shorthand
+auto-provisions one resource per project, legacy-compatible with v1.
+For any project needing a renameable database, a database shared
+across projects, or explicit ENV var control, use `creek db create` +
+`creek db attach` (see the next section). The two paths can coexist
+during migration.
+
 ### Cron triggers
 
 Creek reads the `cron` array and registers each expression with
@@ -281,6 +294,49 @@ export default {
 Send a message from the CLI (useful for testing):
 ```bash
 creek queue send '{"userId":"abc"}' --json
+```
+
+## Resources v2 (`creek db`)
+
+Databases (and other resources) are **team-owned**, not project-owned.
+A resource has a stable UUID and a mutable name; it can be attached
+to one or more projects under different ENV var names. This replaces
+the "one D1 per project, name derived from project id" model.
+
+Workflow:
+
+```bash
+# 1. Create a team-level database (unattached, not yet provisioned in CF)
+creek db create users --json
+
+# 2. Attach it to one project as env.DB
+creek db attach users --to my-api --as DB --json
+
+# 3. Optionally share the same database with another project
+creek db attach users --to dashboard --as DB --json
+
+# 4. Inspect what's attached
+creek db ls --json
+```
+
+The database name is mutable — `creek db rename users --to prod-users`
+works without recreating the CF resource or breaking bindings.
+
+Deletion is blocked while any binding exists — detach from every
+project first, then `creek db delete`.
+
+### Portable driver (required mental model)
+
+Your code reads `env.DB` in both local dev and production. Locally
+that's `better-sqlite3`, remotely that's D1, same async API via
+Drizzle/Kysely. See `examples/vite-react-drizzle` for the single-file
+pattern. Don't split `db.local.ts` + `db.prod.ts` — `creek doctor`
+flags this with `CK-DB-DUAL-DRIVER-SPLIT`.
+
+```ts
+// server/db.ts — one file, works in both environments
+import { drizzle } from "drizzle-orm/d1";  // or the better-sqlite3 variant in dev
+// ... same schema, same queries, same migrations
 ```
 
 ## Supported Frameworks
@@ -334,3 +390,6 @@ Deploy** GitHub App and connects a repository to a Creek project:
 | Domain stuck "pending" | Set CNAME to `cname.creek.dev`, then `creek domains activate` |
 | Build fails | Check `[build] command` in creek.toml |
 | Webhook not firing on push | Verify the repo is connected under project Settings; GitHub App must be installed on the repo's account |
+| `CK-DB-DUAL-DRIVER-SPLIT` from `creek doctor` | Consolidate `db.local.ts` + `db.prod.ts` into a single `server/db.ts`. See `examples/vite-react-drizzle`. |
+| "Resource has bindings" on `creek db delete` | Detach from every project (`creek db detach <name> --from <project>`) before deletion |
+| "A resource named 'X' already exists" | Team-unique names; pick a different one or `creek db rename` the existing one |
