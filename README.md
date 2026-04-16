@@ -1,42 +1,43 @@
-# Agent Skills for Creek
+# Agent Skills for Creek — DEPRECATED
 
-[Agent Skills](https://agentskills.io/) for [Creek](https://creek.dev) — the deployment platform that reduces Cloudflare's 200+ API primitives to a single command.
+> This repository is **deprecated and frozen**. The Creek skill has
+> moved into the main Creek monorepo and is now maintained alongside
+> the CLI, SDK, and MCP server.
 
-```
-npx skills add solcreek/skills
-```
+## Switch to the new install URL
 
-See [install.md](install.md) for full setup instructions including CLI installation.
-
-## Available skills
-
-| Skill | Description |
-|-------|-------------|
-| [creek](skills/creek/SKILL.md) | Deploy and manage applications on Creek — deploy, diagnose failures, read logs, manage team databases, domains, cron, queues, GitHub push deploys. |
-
-## Skill layout
-
-The `creek` skill follows Anthropic's [progressive-disclosure guidance](https://code.claude.com/docs/en/skills) — `SKILL.md` stays lean (~120 lines with mental model, anti-patterns, quick triage, cheat sheet), and topic-focused detail lives in `references/` files that Claude loads on-demand:
-
-```
-skills/creek/
-├── SKILL.md                     entry + index of references
-└── references/
-    ├── commands.md              full command table + JSON output spec
-    ├── deployment-modes.md      authenticated / sandbox / CI / --from-github
-    ├── workflows.md             first-deploy / rollback / domain, frameworks
-    ├── creek-toml.md            creek.toml reference + cron + queue
-    ├── diagnosis.md             failure workflow + CK-code map + troubleshooting
-    ├── observability.md         creek logs + build logs + MCP get_build_log
-    ├── resources.md             creek db + team-owned databases + portable pattern
-    └── github-setup.md          GitHub App install + connection
+```bash
+npx skills add solcreek/creek/skills
 ```
 
-## Requires
+The `skills` CLI supports subpath installation, so the new URL maps
+directly to the `skills/` directory inside the Creek monorepo at
+[solcreek/creek](https://github.com/solcreek/creek).
 
-- [Creek CLI](https://www.npmjs.com/package/creek) (`npm install -g creek`)
-- An authenticated account for production deploys (`creek login`)
+## Why moved
 
-## License
+Three channels used to consume the same skill content from different
+places:
 
-Apache-2.0
+- the filesystem skill installed via `npx skills add`
+- the MCP resources served by `mcp.creek.dev`
+- the llms.txt agent playbook served from creek.dev
+
+Keeping a separate repo as the source of truth forced manual or CI
+sync to the other consumers — fragile, PAT-dependent, silently
+drift-prone. Consolidating everything into the main monorepo makes
+drift architecturally impossible: one `.md` edit, one deploy, all
+surfaces updated.
+
+## What's still here
+
+The last snapshot of the skill content before consolidation. No
+further updates will land in this repo. The content may be
+inaccurate relative to the latest `creek` CLI; follow the new URL.
+
+## Links
+
+- **New install**: `npx skills add solcreek/creek/skills`
+- **Monorepo location**: [solcreek/creek/tree/main/skills](https://github.com/solcreek/creek/tree/main/skills)
+- **MCP server**: `https://mcp.creek.dev/mcp` (exposes the same reference content as `creek://skill/*` resources)
+- **Creek docs**: [creek.dev/docs](https://creek.dev/docs)
