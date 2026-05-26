@@ -1,43 +1,54 @@
-# Agent Skills for Creek — DEPRECATED
+# Agent Skills for Creek
 
-> This repository is **deprecated and frozen**. The Creek skill has
-> moved into the main Creek monorepo and is now maintained alongside
-> the CLI, SDK, and MCP server.
+Official [Agent Skills](https://agentskills.io/) for [Creek](https://creek.dev) — the open-source deployment platform.
 
-## Switch to the new install URL
+## Install
 
 ```bash
-npx skills add solcreek/creek/skills
+npx skills add solcreek/skills
 ```
 
-The `skills` CLI supports subpath installation, so the new URL maps
-directly to the `skills/` directory inside the Creek monorepo at
-[solcreek/creek](https://github.com/solcreek/creek).
+Works with Claude Code, Cursor, GitHub Copilot, Windsurf, Codex, Cline, Gemini CLI, and 30+ other AI coding agents.
 
-## Why moved
+## Available Skills
 
-Three channels used to consume the same skill content from different
-places:
+### creek
 
-- the filesystem skill installed via `npx skills add`
-- the MCP resources served by `mcp.creek.dev`
-- the llms.txt agent playbook served from creek.dev
+Deploy and manage apps on Creek. Covers the full CLI surface: deploy (7 modes), local dev, environment variables, database/storage/cache provisioning, custom domains, logs, metrics, rollback, diagnostics, and creekd operations.
 
-Keeping a separate repo as the source of truth forced manual or CI
-sync to the other consumers — fragile, PAT-dependent, silently
-drift-prone. Consolidating everything into the main monorepo makes
-drift architecturally impossible: one `.md` edit, one deploy, all
-surfaces updated.
+```
+skills/creek/
+  SKILL.md                      # Main skill manifest
+  references/
+    commands.md                 # Complete command table + JSON output spec
+    deployment-modes.md         # Authenticated / sandbox / CI / remote-GitHub
+    workflows.md                # First-deploy, update-rollback, custom-domain
+    creek-toml.md               # creek.toml reference, cron + queue
+    diagnosis.md                # CK-code fix table + failure workflows
+    observability.md            # creek logs + build logs + edge-cache caveats
+    resources.md                # creek db + team-owned resource model
+    github-setup.md             # GitHub App install + push-to-deploy
+```
 
-## What's still here
+## How It Works
 
-The last snapshot of the skill content before consolidation. No
-further updates will land in this repo. The content may be
-inaccurate relative to the latest `creek` CLI; follow the new URL.
+Skills follow progressive disclosure:
+
+1. **Discovery** — agent reads only `name` + `description` from SKILL.md frontmatter (low context cost)
+2. **Activation** — when a task matches, the full SKILL.md loads into context
+3. **Deep dive** — agent reads `references/*.md` on demand for detailed guidance
+
+## MCP Server
+
+For agents that support MCP, Creek also provides a remote MCP server at `mcp.creek.dev/mcp` with tools (deploy, resource CRUD, DB query, build log inspection) and the same reference content as `creek://skill/*` resources.
 
 ## Links
 
-- **New install**: `npx skills add solcreek/creek/skills`
-- **Monorepo location**: [solcreek/creek/tree/main/skills](https://github.com/solcreek/creek/tree/main/skills)
-- **MCP server**: `https://mcp.creek.dev/mcp` (exposes the same reference content as `creek://skill/*` resources)
-- **Creek docs**: [creek.dev/docs](https://creek.dev/docs)
+- [Creek](https://creek.dev)
+- [Creek CLI docs](https://creek.dev/docs)
+- [Agent Skills spec](https://agentskills.io)
+- [MCP server](https://mcp.creek.dev/mcp)
+
+## License
+
+Apache-2.0
