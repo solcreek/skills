@@ -12,8 +12,8 @@ creek doctor --json
 
 Returns findings with `CK-*` codes, severities, and concrete fixes.
 Run before any deploy-not-even-attempted scenario. Common fires:
-`CK-NO-CONFIG`, `CK-NOTHING-TO-DEPLOY`, `CK-DB-DUAL-DRIVER-SPLIT`,
-`CK-SYNC-SQLITE`, `CK-PRISMA-SQLITE`.
+`CK-NO-CONFIG`, `CK-NOTHING-TO-DEPLOY`, `CK-RESOURCES-NO-WORKER`,
+`CK-DB-DUAL-DRIVER-SPLIT`, `CK-SYNC-SQLITE`, `CK-PRISMA-SQLITE`.
 
 ## 2. Find the failed deployment
 
@@ -40,7 +40,9 @@ Match `errorCode` against the CK-* mapping:
 | Code | Fix |
 |------|-----|
 | `CK-NO-CONFIG` | Run `creek init` or cd to a project root |
-| `CK-NOTHING-TO-DEPLOY` | Run the build, or set `[build].command` in creek.toml |
+| `CK-NOTHING-TO-DEPLOY` | Run the build, or set `[build].command`; server code / API routes also need `[build].worker` |
+| `CK-RESOURCES-NO-WORKER` | Resources declared but no worker entry — deploy is a static SPA, `/api/*` serves index.html. Set `[build].worker` (e.g. `worker = "worker/index.ts"`) |
+| `CK-WORKER-UNDECLARED` | Worker file exists but isn't declared — point `[build].worker` at it |
 | `CK-DB-DUAL-DRIVER-SPLIT` | Consolidate to shared `schema.ts` + `routes.ts` + thin boot split (see `references/resources.md`) |
 | `CK-SYNC-SQLITE` | Move to async ORM (Drizzle/Kysely) with D1 adapter |
 | `CK-PRISMA-SQLITE` | Prisma+SQLite not supported on Workers; switch to Drizzle/Kysely |
