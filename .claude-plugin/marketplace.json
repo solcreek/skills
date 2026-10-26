@@ -1,0 +1,29 @@
+{
+  "name": "solcreek",
+  "owner": {
+    "name": "solcreek",
+    "url": "https://github.com/solcreek"
+  },
+  "description": "Agent skills for solcreek's tools: Creek deployments and the linearctl CLI for Linear",
+  "plugins": [
+    {
+      "name": "creek",
+      "source": "./",
+      "description": "Deploy and manage apps on Creek: deploys, logs, databases, custom domains, diagnostics",
+      "homepage": "https://creek.dev",
+      "repository": "https://github.com/solcreek/skills",
+      "license": "Apache-2.0",
+      "skills": ["./skills/creek"]
+    },
+    {
+      "name": "linearctl",
+      "source": {
+        "source": "github",
+        "repo": "solcreek/linear-cli"
+      },
+      "description": "Read and change Linear issues, comments, projects and relations with the linearctl CLI",
+      "homepage": "https://github.com/solcreek/linear-cli",
+      "license": "MIT"
+    }
+  ]
+}
